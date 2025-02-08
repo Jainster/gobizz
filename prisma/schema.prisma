@@ -12,17 +12,95 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+model User {
+  id        String    @id @default(cuid())
+  name      String
+  email     String    @unique
+  password  String?
+  image     String    @default("/default.jpg")
+  type      UserType
+  business_name        String?
+  business_description String?
+  business_address     String?
+  business_phonenumber String?
+  business_tags        String[] @default([])
+
+
+  // A user can have multiple items, products, and orders
+  items     Item[]
+  products  Product[]
+  orders    Order[]
+}
+
+model Item {
+  id          String       @id @default(cuid())
+  name        String
+  quantity    Float
+  unit        String   
+  totalCost  Int 
+  user        User        @relation(fields: [userId], references: [id])
+  userId      String
+
+  productItems ProductItem[] @relation("ItemToProductItem") // ✅ Fixed
+}
+
+model Product {
+  id           String       @id @default(cuid())
+  name         String
+  description  String?
+  price        Float
+  stock       Int
+  user         User         @relation(fields: [userId], references: [id])
+  userId       String
+
+  productItems  ProductItem[] @relation("ProductToProductItem") // ✅ Fixed
+  orderProducts OrderProduct[]
+}
+
+model ProductItem {
+  id         String  @id @default(cuid())
+
+  product    Product @relation(name: "ProductToProductItem", fields: [productId], references: [id])
+  productId  String
+
+  item       Item    @relation(name: "ItemToProductItem", fields: [itemId], references: [id])
+  itemId     String
+
+  quantity   Float   
+}
+
+model Order {
+  id          String       @id @default(cuid())
+  customer    String
+  createdAt   DateTime     @default(now())
+  status      OrderStatus
+  user        User         @relation(fields: [userId], references: [id])
+  userId      String
+
+  orderProducts OrderProduct[]
+  bill        Float
+}
+
+model OrderProduct {
+  id         String  @id @default(cuid())
+  order      Order   @relation(fields: [orderId], references: [id])
+  orderId    String
+  product    Product @relation(fields: [productId], references: [id])
+  productId  String
+  quantity   Int
+}
+
+// Enums
 enum UserType {
   LOCAL
   GOOGLE
 }
 
-
-model User {
-  id        String   @id @default(cuid())
-  name      String
-  email     String   @unique
-  password  String?  
-  image     String   @default("/default.jpg")
-  type      UserType
+enum OrderStatus {
+  PENDING
+  INPROGRESS
+  COMPLETED
+  DELIVERING
+  DELIVERED
+  CANCELED
 }
